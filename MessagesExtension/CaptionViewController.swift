@@ -23,6 +23,8 @@ class CaptionViewController: UIViewController {
         }
     }
     
+    weak var callBackDelegate : ViewControllerCallback?
+    
     var currentRound : CKRecord?
     
     let captions = ["When he nut in yo eye", "When the acid finally kicks in", "When you feeling really good about yourself but then you look in the mirror", "Funny joke"]
@@ -95,6 +97,11 @@ extension CaptionViewController : CaptionScrollDataSource
 extension CaptionViewController : CaptionCardDelegate
 {
     func tappedCard(withCaption caption: String) {
+        
+        guard let cpm = self.cpm else {
+                fatalError("caption photo message yields nil")
+        }
+        
         if let round = self.currentRound {
             let responses = round["responses"] as! NSArray
             var newResponses : NSArray
@@ -114,9 +121,16 @@ extension CaptionViewController : CaptionCardDelegate
                     self.present(alert, animated: true, completion: nil)
                 } else {
                  print("Success")
+                    cpm.caption = caption
                 }
                 
-                self.delegate?.captionSelected(withImage: self.imageView.image!)
+                if let image = self.imageView.image {
+                    cpm.image = image
+                }
+                
+                
+                self.callBackDelegate?.finishedActions(withModel: cpm)
+                //self.delegate?.captionSelected(withImage: self.imageView.image!)
             })
             
             

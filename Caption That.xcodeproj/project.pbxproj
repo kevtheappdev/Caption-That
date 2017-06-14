@@ -20,6 +20,7 @@
 		68857E311EE771C600EEC2FC /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 68857E301EE771C600EEC2FC /* CloudKit.framework */; };
 		68A5FA1F1EE8914F00589679 /* CaptionScroll.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A5FA1E1EE8914F00589679 /* CaptionScroll.swift */; };
 		68A5FA211EE8915C00589679 /* CaptionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A5FA201EE8915C00589679 /* CaptionCard.swift */; };
+		68B985AB1EF0D2040062975B /* Waiting.xib in Resources */ = {isa = PBXBuildFile; fileRef = 68B985AA1EF0D2040062975B /* Waiting.xib */; };
 		68E212E31EE7C73500CF7E11 /* CaptionPhotoMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68E212E21EE7C73500CF7E11 /* CaptionPhotoMessage.swift */; };
 /* End PBXBuildFile section */
 
@@ -65,6 +66,7 @@
 		68857E301EE771C600EEC2FC /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		68A5FA1E1EE8914F00589679 /* CaptionScroll.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CaptionScroll.swift; sourceTree = "<group>"; };
 		68A5FA201EE8915C00589679 /* CaptionCard.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CaptionCard.swift; sourceTree = "<group>"; };
+		68B985AA1EF0D2040062975B /* Waiting.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Waiting.xib; sourceTree = "<group>"; };
 		68E212E21EE7C73500CF7E11 /* CaptionPhotoMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CaptionPhotoMessage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -127,6 +129,7 @@
 				681E81561ED3B7680023D50C /* MessagesViewController.swift */,
 				681E81581ED3B7680023D50C /* MainInterface.storyboard */,
 				686D913C1EE7D29000FBD20B /* CaptionViewController.swift */,
+				68B985AA1EF0D2040062975B /* Waiting.xib */,
 				6856175F1EDCEAF400660AF7 /* StartRoundViewController.swift */,
 				681E815B1ED3B7680023D50C /* Assets.xcassets */,
 				681E815D1ED3B7680023D50C /* Info.plist */,
@@ -246,6 +249,7 @@
 			files = (
 				681E815C1ED3B7680023D50C /* Assets.xcassets in Resources */,
 				681E815A1ED3B7680023D50C /* MainInterface.storyboard in Resources */,
+				68B985AB1EF0D2040062975B /* Waiting.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

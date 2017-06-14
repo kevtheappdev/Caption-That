@@ -8,13 +8,43 @@
 //
 
 import UIKit
+import CloudKit
 
 class WaitingViewController: UIViewController {
 
+    @IBOutlet weak var statusLabel: UILabel!
+    @IBOutlet weak var loadingView: UIActivityIndicatorView!
+    
+    var roundID : String? {
+        didSet {
+            fetchResponses()
+        }
+    }
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Do any additional setup after loading the view.
+        self.loadingView.startAnimating()
+        
+    }
+    
+    
+    func fetchResponses(){
+        let publicDB = CKContainer.default().publicCloudDatabase
+        let roundID = CKRecordID(recordName: self.roundID!)
+        
+        publicDB.fetch(withRecordID: roundID, completionHandler: ({(record, error) in
+            if error == nil {
+            let responses = record!["responses"] as! NSArray
+                for response in responses {
+                    print(response as! String)
+                }
+            } else {
+                print(error!)
+            }
+        }))
+        
+        
     }
 
     override func didReceiveMemoryWarning() {

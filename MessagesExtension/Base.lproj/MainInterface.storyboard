@@ -254,6 +254,10 @@
                     </view>
                     <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
                     <size key="freeformSize" width="320" height="528"/>
+                    <connections>
+                        <outlet property="loadingView" destination="frO-Eh-IXM" id="sda-2k-zUg"/>
+                        <outlet property="statusLabel" destination="ItL-5L-Yh4" id="BP1-oa-RLw"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Pdn-i9-OwM" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>

@@ -14,6 +14,7 @@ protocol StartRoundViewControllerDelegate {
 
 import UIKit
 import Photos
+import CloudKit
 
 class StartRoundViewController: UIViewController  {
 
@@ -21,7 +22,9 @@ class StartRoundViewController: UIViewController  {
     var assets : PHFetchResult<PHAsset>!
     var selectedImage : PHAsset?
     var selectedIndex : IndexPath?
-    var delegate : StartRoundViewControllerDelegate?
+    var cpm : CaptionPhotoMessage?
+    weak var callbackDelegate : ViewControllerCallback?
+    
     
     @IBOutlet weak var previewView: UIImageView!
     @IBOutlet weak var selectImageButton: UIButton!
@@ -62,8 +65,13 @@ class StartRoundViewController: UIViewController  {
 
     @IBAction func selectedImageButtonPressed(_ sender: Any) {
         if self.selectedImage != nil {
-            PHImageManager.default().requestImage(for: self.selectedImage!, targetSize: CGSize(width: self.view.bounds.width, height: 0.75 * self.view.bounds.width), contentMode: .aspectFit, options: nil, resultHandler: {(image, info) in
-                self.delegate?.selectedImage(image!)
+            let option = PHImageRequestOptions()
+            option.isSynchronous = true
+            PHImageManager.default().requestImage(for: self.selectedImage!, targetSize: CGSize(width: self.view.bounds.width, height: 0.75 * self.view.bounds.width), contentMode: .aspectFit, options: option, resultHandler: {(image, info) in
+                guard let roundID = self.cpm?.roundID else {
+                    fatalError("Round ID not set for ViewController")
+                }
+                self.saveImage(image!, roundID: roundID)
             })
         }
     }
@@ -78,6 +86,52 @@ class StartRoundViewController: UIViewController  {
     func showNeedsAccessMessage(){
         let alert = UIAlertController(title: "Enable Photo acces", message: "You will need to grant access to your photos in order to play this game. Please do so under your phone's settings", preferredStyle: .alert)
         self.present(alert, animated: true, completion: nil)
+    }
+    
+    
+    //Called once when the user selects the desired image
+    func saveImage(_ image: UIImage, roundID: String){
+        let searchPaths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        let documents = searchPaths.first
+        
+        guard let docPath = documents else {
+            fatalError("Documents Path not found")
+        }
+        
+        let imagePath = docPath.appendingPathComponent("round.png")
+        
+        guard let imageData = UIImagePNGRepresentation(image) else {
+            fatalError("Could not get image data")
+        }
+         guard let cpm = self.cpm else {
+                    fatalError("Model was not found")
+        }
+        
+        try? imageData.write(to: imagePath)
+        
+        let roundRecordID = CKRecordID(recordName: roundID)
+        let roundRecord = CKRecord(recordType: "Round", recordID: roundRecordID)
+        
+        
+        let imageAsset = CKAsset(fileURL: imagePath)
+        roundRecord["image"] = imageAsset
+        roundRecord["responses"] = [""] as NSArray
+        
+        let myContainer = CKContainer.default()
+        let publicDatabase = myContainer.publicCloudDatabase
+        publicDatabase.save(roundRecord, completionHandler: {(record, error) in
+            if let error  = error {
+                print("failed")
+                print(error)
+                cpm.error = error
+            } else {
+                print(roundID)
+               
+            }
+                cpm.image = image
+                self.callbackDelegate?.finishedActions(withModel: cpm)
+                
+        })
     }
     
     

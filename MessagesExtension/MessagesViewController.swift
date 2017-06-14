@@ -11,8 +11,14 @@ import Messages
 import PhotosUI
 import CloudKit
 
+
+protocol ViewControllerCallback : class {
+    func finishedActions(withModel model: CaptionPhotoMessage)
+}
+
 class MessagesViewController: MSMessagesAppViewController {
     var cpm : CaptionPhotoMessage?
+    var sendAction : (() -> ())?
     
     
     
@@ -37,21 +43,27 @@ class MessagesViewController: MSMessagesAppViewController {
         
         // Use this method to configure the extension and restore previously stored state.
         
+        
+        
         if let selectedMessage = conversation.selectedMessage {
+
+            
             let cpm = CaptionPhotoMessage(message: selectedMessage) ?? CaptionPhotoMessage()
-            self.cpm = cpm
-            
-            
+
             if cpm.senderID == conversation.localParticipantIdentifier.uuidString {
-                //waiting interface
+                guard let waitingVC = instantiateVC(withId: "waiting") as? WaitingViewController else {
+                    fatalError("Could not instantiate viewcontroller")
+                }
+                waitingVC.roundID = cpm.roundID
+                adddChildVC(waitingVC)
             } else {
                 //Open captioning interface
                 guard let captionVC = instantiateVC(withId: "caption") as? CaptionViewController else {
                     fatalError("Cannot present VC")
                 }
                 
+                captionVC.callBackDelegate = self
                 adddChildVC(captionVC)
-                captionVC.delegate = self
                 captionVC.cpm = cpm
             }
             
@@ -75,9 +87,18 @@ class MessagesViewController: MSMessagesAppViewController {
             fatalError("could not initizlize")
         }
         
+        guard let conversation = activeConversation else {
+            fatalError("No conversation found")
+        }
+        
+        let roundID = NSUUID().uuidString
+        
+        let cpm = CaptionPhotoMessage(roundID: roundID, senderID: conversation.localParticipantIdentifier.uuidString)
+        startRoundVC.cpm = cpm
         
         requestPresentationStyle(.expanded)
-        startRoundVC.delegate = self
+        startRoundVC.callbackDelegate = self
+        //startRoundVC.delegate = self
         
         adddChildVC(startRoundVC)
     }
@@ -97,7 +118,7 @@ class MessagesViewController: MSMessagesAppViewController {
     
     override func didCancelSending(_ message: MSMessage, conversation: MSConversation) {
         // Called when the user deletes the message without sending it.
-    
+        self.cpm?.cancelAction()
         // Use this to clean up state related to the deleted message.
     }
     
@@ -142,26 +163,23 @@ class MessagesViewController: MSMessagesAppViewController {
     }
     
     
-    func composeMessage(withImage image: UIImage, roundID: String, caption: String, session: MSSession? = nil) -> MSMessage
+    func composeMessage(withImage image: UIImage, roundID: String, caption: String, senderID: String, session: MSSession? = nil) -> MSMessage
     {
-        guard let conversation = activeConversation else {
-            fatalError("could not get active conversation")
-        }
+      
         
         
         
         var components = URLComponents()
-        print("session : \(session)")
+
         let message = MSMessage(session: session ?? MSSession())
         message.url = components.url!
     
         
         
-         let roundID = NSUUID().uuidString
-        
+             
         var queryItems = [URLQueryItem]()
         queryItems.append(URLQueryItem(name: "roundID", value: roundID))
-        queryItems.append(URLQueryItem(name: "senderID", value: conversation.localParticipantIdentifier.uuidString))
+        queryItems.append(URLQueryItem(name: "senderID", value: senderID))
         
         components.queryItems = queryItems
         
@@ -173,7 +191,40 @@ class MessagesViewController: MSMessagesAppViewController {
         message.layout = layout
         message.url = components.url!
         
-        saveImage(image, roundID: roundID)
+        
+        
+        return message
+    }
+    
+    
+    func composeMessage(withModel model: CaptionPhotoMessage) -> MSMessage
+    {
+        
+        let session = activeConversation?.selectedMessage?.session
+        
+        var components = URLComponents()
+        
+        let message = MSMessage(session: session ?? MSSession())
+        message.url = components.url!
+        
+        
+        
+        
+        var queryItems = [URLQueryItem]()
+        queryItems.append(URLQueryItem(name: "roundID", value: model.roundID))
+        queryItems.append(URLQueryItem(name: "senderID", value: model.senderID))
+        
+        components.queryItems = queryItems
+        
+        let layout = MSMessageTemplateLayout()
+        
+        layout.image = model.image
+        layout.caption = model.caption
+        
+        message.layout = layout
+        message.url = components.url!
+        
+        
         
         return message
     }
@@ -219,56 +270,101 @@ class MessagesViewController: MSMessagesAppViewController {
 
 }
 
-extension MessagesViewController : CaptionViewControllerDelegate
+
+extension MessagesViewController : ViewControllerCallback
 {
-    func captionSelected(withImage image: UIImage) {
-        DispatchQueue.main.async {
-              self.removeAllChildViewControllers()
-    
-            let message = self.composeMessage(withImage: image, roundID: self.cpm!.roundID, caption: "Selected caption", session: self.activeConversation?.selectedMessage?.session)
-            self.activeConversation?.insert(message, completionHandler: nil)
+    func finishedActions(withModel model: CaptionPhotoMessage) {
+        self.cpm = model
         
-        self.dismiss()
-        }
-      
-    }
-}
-
-
-
-extension MessagesViewController : StartRoundViewControllerDelegate
-{
-    func selectedImage(_ image: UIImage) {
-       removeAllChildViewControllers()
-        
-        guard let conversation = activeConversation else {
-            fatalError("Conversation could not be loaded")
-        }
-        
-        var components = URLComponents()
-        
-        let roundID = NSUUID().uuidString
-        
-        var queryItems = [URLQueryItem]()
-        queryItems.append(URLQueryItem(name: "roundID", value: roundID))
-        queryItems.append(URLQueryItem(name: "senderID", value: conversation.localParticipantIdentifier.uuidString))
-        
-        components.queryItems = queryItems
-        
-        let message = composeMessage(withImage: image, roundID: roundID, caption: "Image Selected", session: conversation.selectedMessage?.session)
-      
-        
-        
-        
-
-        
-        conversation.insert(message, completionHandler: {(error) in
-            if #available(iOSApplicationExtension 11.0, *) {
-                self.dismiss()
-            } else {
-                // Fallback on earlier versions
-                self.dismiss()
+        if cpm?.error != nil {
+            let alert = UIAlertController(title: "Something went wrong...", message: "We couldn't complete the requested action, please make sure your internet connection is valid", preferredStyle: .alert)
+            let action = UIAlertAction(title: "OK", style: .default, handler: nil)
+            alert.addAction(action)
+            self.present(alert, animated: true, completion: nil)
+          
+        } else {
+            let message = composeMessage(withModel: cpm!)
+            
+            guard let conversation = activeConversation else {
+                fatalError("Failed to load the conversation")
             }
-        })
+            
+            conversation.insert(message, completionHandler: ({(error) in
+                if error != nil {
+                    fatalError("Could not insert message")
+                } else {
+                    self.dismiss()
+                }
+            }))
+        }
     }
 }
+
+//extension MessagesViewController : CaptionViewControllerDelegate
+//{
+//    func captionSelected(withImage image: UIImage) {
+//        DispatchQueue.main.async {
+//              self.removeAllChildViewControllers()
+//            
+//            let message = self.composeMessage(withImage: image, roundID: self.cpm!.roundID, caption: "Selectes caption", senderID: self.cpm!.senderID, session: self.activeConversation?.selectedMessage?.session)
+//            self.activeConversation?.insert(message, completionHandler: nil)
+//        
+//             self.dismiss()
+//        }
+//      
+//    }
+//    
+//    func captionSelected(_ caption: String){
+//        guard let roundIDString = self.cpm?.roundID else {
+//            return
+//        }
+//        
+//        let publicDB = CKContainer.default().publicCloudDatabase
+//        let roundID = CKRecordID(recordName: roundIDString)
+//        
+//        publicDB.fetch(withRecordID: roundID, completionHandler: ({(record, error) in
+//            if error == nil {
+//                let responses = record!["responses"] as! NSArray
+//                print(responses)
+//                for response in responses {
+//                    let userResponse = response as! String
+//                    print("response is \(userResponse)")
+//                }
+//            } else {
+//                print(error!)
+//            }
+//        }))
+//    }
+//}
+
+
+
+//extension MessagesViewController : StartRoundViewControllerDelegate
+//{
+//    func selectedImage(_ image: UIImage) {
+//       removeAllChildViewControllers()
+//        
+//        guard let conversation = activeConversation else {
+//            fatalError("Conversation could not be loaded")
+//        }
+//        
+//  
+//        //FIX ME : remove any other creation of roundID
+//        let roundID = NSUUID().uuidString
+//        
+//
+//        
+//        let message = composeMessage(withImage: image, roundID: roundID, caption: "Image Selected", senderID: conversation.localParticipantIdentifier.uuidString, session: conversation.selectedMessage?.session)
+//        
+//        saveImage(image, roundID: roundID)
+//        
+//        conversation.insert(message, completionHandler: {(error) in
+//            if #available(iOSApplicationExtension 11.0, *) {
+//                self.dismiss()
+//            } else {
+//                // Fallback on earlier versions
+//                self.dismiss()
+//            }
+//        })
+//    }
+//}
